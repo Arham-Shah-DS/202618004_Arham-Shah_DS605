@@ -49,19 +49,19 @@ The objective of this assignment is to scrape book data from the Books to Scrape
 1. Run the Scrapy spider:
 
 ```bash
-python books_scraper.py
+202618004_Lab_1.py
 ```
 
 2. Preprocess the dataset:
 
 ```bash
-python preprocessing.py
+preprocessing.py
 ```
 
 3. Generate visualizations:
 
 ```bash
-python visualization.py
+visualization.py
 ```
 
 ---
