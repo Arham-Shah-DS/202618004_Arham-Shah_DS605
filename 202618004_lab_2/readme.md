@@ -42,3 +42,16 @@ The assignment covers:
 - Statistical observations
 
 ---
+
+## 📊 Key Observations
+
+- 👩 **Female passengers had a significantly higher survival rate** than male passengers.
+- 🎫 **First-class passengers had a higher survival rate** compared to second- and third-class passengers.
+- 💰 **First-class passengers generally paid higher fares** than passengers in lower classes.
+- 📉 **Pclass and Survived showed a negative correlation**, indicating lower survival among passengers in higher-numbered classes.
+- 👨 **Male passengers had a much lower survival rate** compared to female passengers.
+- 👨‍👩‍👧‍👦 **Family size and travelling alone affected survival patterns**, with survival rates varying across different family sizes.
+- 💵 **Fare contained several outliers**, identified using the 1.5 × IQR method.
+- 🚢 Passengers who **embarked from different ports showed different survival rates**.
+- 📈 The **Age vs Fare visualization** showed that most passengers paid relatively lower fares, while a smaller number paid significantly higher fares.
+- 🔥 The **correlation heatmap** showed meaningful relationships among variables such as Pclass, Fare, Age, and Survived.
