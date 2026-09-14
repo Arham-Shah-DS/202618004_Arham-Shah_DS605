@@ -1,77 +1,135 @@
 # DS605 Lab 4 — Airbnb Price Prediction
 
-End-to-end machine learning project using the Kaggle **New York City Airbnb Open Data (AB_NYC_2019)** dataset.
+End-to-end machine learning project for predicting Airbnb nightly prices using the Kaggle **New York City Airbnb Open Data (AB_NYC_2019)** dataset.
 
-## Assignment coverage
-The project follows the required workflow: data analysis/preparation, regression model comparison and tuning, final model evaluation, saved model/pipeline, and a Gradio application. The assignment asks for a public GitHub repository containing the notebook, application, saved model/pipeline, requirements, README, results/plots, and application screenshots/link if available. 
+## 🚀 Live Demo
+
+**Streamlit Application:**  
+https://202618004arham-shahds605-yqwoehhfdu2tpmuuxhunhs.streamlit.app/
+
+The application allows users to enter Airbnb listing information and receive an estimated nightly price using the trained CatBoost regression model.
+
+## Assignment Coverage
+
+This project follows the required end-to-end machine learning workflow:
+
+- Data analysis and preparation
+- Data cleaning and preprocessing
+- Feature engineering and feature selection
+- Missing-value and outlier handling
+- Regression model comparison
+- Hyperparameter tuning
+- Final model evaluation
+- Saved trained model and metadata
+- Interactive Streamlit prediction application
+- Online deployment using Streamlit Community Cloud
 
 ## Dataset
-Place `AB_NYC_2019.csv` in `data/`. The supplied dataset contains 48,895 rows and 16 columns.
 
-## Method
-- Remove rows with `price <= 0`.
-- Treat extreme price outliers by restricting training data to `$1–$1,000` per night.
-- Parse `last_review` and create `last_review_year` and `last_review_month`.
-- Drop identifier/free-text fields (`id`, `name`, `host_id`, `host_name`) because they are not useful as general listing attributes.
-- Impute missing numeric values with training medians and categorical values with `"Unknown"` for CatBoost.
-- Predict `log1p(price)` to reduce the effect of the right-skewed target, then transform predictions back using `expm1`.
-- Compare Ridge, Random Forest, and CatBoost.
-- Tune CatBoost depth, learning rate, and regularization on a validation split.
-- Final model: CatBoostRegressor with depth 10, learning rate 0.05, L2 regularization 8, 650 iterations.
+The project uses the Kaggle **New York City Airbnb Open Data (AB_NYC_2019)** dataset.
 
-## Results
+- **Rows:** 48,895
+- **Columns:** 16
+- **Target:** `price`
+
+Place `AB_NYC_2019.csv` inside the `data/` directory.
+
+## Data Preparation and Feature Engineering
+
+The following preprocessing steps were performed:
+
+- Removed rows where `price <= 0`.
+- Restricted training data to prices between **$1 and $1,000** per night to reduce the effect of extreme outliers.
+- Parsed `last_review` and extracted:
+  - `last_review_year`
+  - `last_review_month`
+- Removed identifier/free-text columns:
+  - `id`
+  - `name`
+  - `host_id`
+  - `host_name`
+- Handled missing numerical values using training medians.
+- Handled missing categorical values using `"Unknown"`.
+- Applied `log1p(price)` to reduce the effect of the highly right-skewed target.
+- Converted predictions back to the original price scale using `expm1`.
+
+## Features Used
+
+The final model uses:
+
+- `neighbourhood_group`
+- `neighbourhood`
+- `latitude`
+- `longitude`
+- `room_type`
+- `minimum_nights`
+- `number_of_reviews`
+- `reviews_per_month`
+- `calculated_host_listings_count`
+- `availability_365`
+- `last_review_year`
+- `last_review_month`
+
+## Models Compared
+
+Three regression models were evaluated:
+
+1. Ridge Regression
+2. Random Forest Regressor
+3. CatBoost Regressor
+
+CatBoost was selected as the final model after model comparison and hyperparameter tuning.
+
+### Final CatBoost Configuration
+
+- **Iterations:** 650
+- **Depth:** 10
+- **Learning rate:** 0.05
+- **L2 regularization:** 8
+- **Loss function:** RMSE
+- **Random seed:** 42
+
+## Model Results
 
 | Model | MAE ($) | RMSE ($) | R² |
 |---|---:|---:|---:|
 | Ridge | 49.92 | 95.24 | 0.350 |
 | Random Forest | 45.32 | 87.48 | 0.452 |
-| **CatBoost (final)** | **44.99** | **87.54** | **0.451** |
+| **CatBoost (Final)** | **44.99** | **87.54** | **0.451** |
 
-Final model median absolute error: **$22.28**.
+### Final Model Performance
 
-The final model explains about 45% of the variance in the held-out test prices. This is useful for a baseline pricing estimator, but substantial unexplained variation remains.
+- **MAE:** $44.99
+- **RMSE:** $87.54
+- **R²:** 0.451
+- **Median Absolute Error:** $22.28
 
-## How to run
+The final model explains approximately **45% of the variance** in held-out test prices. It provides a useful baseline pricing estimator, although substantial price variation remains unexplained.
+
+## Streamlit Application
+
+The project uses **Streamlit**, not Gradio.
+
+The application accepts:
+
+- Neighbourhood group
+- Neighbourhood
+- Room type
+- Latitude
+- Longitude
+- Minimum nights
+- Number of reviews
+- Reviews per month
+- Host's calculated listing count
+- Availability in days per year
+- Last review year
+- Last review month
+
+After submitting the form, the application displays the estimated nightly Airbnb price.
+
+### Run the Application Locally
+
+Install the required packages:
 
 ```bash
 pip install -r requirements.txt
-jupyter notebook Airbnb_Price_Prediction_Lab4.ipynb
-```
-
-For the web app:
-
-```bash
-python app.py
-```
-
-## Project structure
-
-```text
-.
-├── Airbnb_Price_Prediction_Lab4.ipynb
-├── app.py
-├── requirements.txt
-├── README.md
-├── .gitignore
-├── data/
-│   └── AB_NYC_2019.csv
-├── artifacts/
-│   ├── airbnb_price_model.cbm
-│   └── metadata.json
-└── plots/
-    ├── price_distribution.png
-    ├── median_price_borough.png
-    ├── actual_vs_predicted.png
-    ├── residuals.png
-    └── feature_importance.png
-```
-
-## Limitations
-- The data represents NYC Airbnb listings from 2019, so it does not capture current market conditions.
-- The model is not a causal pricing model.
-- Price is influenced by factors not present in the dataset, such as amenities, photographs, seasonality, events, exact address quality, and host/listing reputation.
-- The `$1,000` cap intentionally removes extreme observations and means the model should not be used for luxury listings above that range.
-- The Gradio neighbourhood dropdown contains representative neighbourhoods for usability; it is not an exhaustive list of every NYC neighbourhood. The underlying model can accept any categorical neighbourhood value.
-
-## Ethical / practical note
-Predictions are estimates, not guaranteed market prices. Users should validate prices against current comparable listings before making pricing or booking decisions.
