@@ -1,34 +1,183 @@
 import json
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-import gradio as gr
+import streamlit as st
 from catboost import CatBoostRegressor
 
-MODEL_PATH = "artifacts/airbnb_price_model.cbm"
-META_PATH = "artifacts/metadata.json"
+
+# -----------------------------
+# Load trained model
+# -----------------------------
+BASE_DIR = Path(__file__).resolve().parent
+
+MODEL_PATH = BASE_DIR / "artifacts" / "airbnb_price_model.cbm"
+META_PATH = BASE_DIR / "artifacts" / "metadata.json"
 
 with open(META_PATH, "r", encoding="utf-8") as f:
     meta = json.load(f)
 
 model = CatBoostRegressor()
-model.load_model(MODEL_PATH)
+model.load_model(str(MODEL_PATH))
 
+
+# -----------------------------
+# Neighbourhood options
+# -----------------------------
 NEIGHBOURHOODS = {
-    "Manhattan": ["Upper West Side", "Harlem", "Midtown", "Chelsea", "East Village", "West Village", "Upper East Side"],
-    "Brooklyn": ["Williamsburg", "Bedford-Stuyvesant", "Bushwick", "Crown Heights", "Park Slope", "Greenpoint"],
-    "Queens": ["Astoria", "Long Island City", "Flushing", "Sunnyside", "Jackson Heights"],
-    "Bronx": ["Fordham", "Mott Haven", "Kingsbridge", "Concourse"],
-    "Staten Island": ["St. George", "Tompkinsville", "Stapleton"],
+    "Manhattan": [
+        "Upper West Side", "Harlem", "Midtown", "Chelsea",
+        "East Village", "West Village", "Upper East Side"
+    ],
+    "Brooklyn": [
+        "Williamsburg", "Bedford-Stuyvesant", "Bushwick",
+        "Crown Heights", "Park Slope", "Greenpoint"
+    ],
+    "Queens": [
+        "Astoria", "Long Island City", "Flushing",
+        "Sunnyside", "Jackson Heights"
+    ],
+    "Bronx": [
+        "Fordham", "Mott Haven", "Kingsbridge", "Concourse"
+    ],
+    "Staten Island": [
+        "St. George", "Tompkinsville", "Stapleton"
+    ],
 }
 
 
-def update_neighbourhoods(borough):
-    return gr.update(choices=NEIGHBOURHOODS[borough], value=NEIGHBOURHOODS[borough][0])
+# -----------------------------
+# Page setup
+# -----------------------------
+st.set_page_config(
+    page_title="Airbnb Nightly Price Predictor",
+    page_icon="🏠",
+    layout="wide"
+)
+
+st.title("🏠 Airbnb Nightly Price Predictor")
+
+st.write(
+    "Estimate the nightly price of a New York City Airbnb listing "
+    "using the trained CatBoost regression model."
+)
+
+st.info(
+    "The model was trained on the 2019 NYC Airbnb dataset. "
+    "Predictions are estimates and should not be treated as current market quotes."
+)
 
 
-def predict_price(borough, neighbourhood, room_type, latitude, longitude,
-                  minimum_nights, number_of_reviews, reviews_per_month,
-                  host_listings, availability, last_review_year, last_review_month):
+# -----------------------------
+# Input form
+# -----------------------------
+with st.form("prediction_form"):
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        borough = st.selectbox(
+            "Neighbourhood group",
+            list(NEIGHBOURHOODS.keys())
+        )
+
+        neighbourhood = st.selectbox(
+            "Neighbourhood",
+            NEIGHBOURHOODS[borough]
+        )
+
+        room_type = st.selectbox(
+            "Room type",
+            [
+                "Entire home/apt",
+                "Private room",
+                "Shared room"
+            ]
+        )
+
+        latitude = st.number_input(
+            "Latitude",
+            value=40.7306,
+            format="%.6f"
+        )
+
+        longitude = st.number_input(
+            "Longitude",
+            value=-73.9857,
+            format="%.6f"
+        )
+
+        minimum_nights = st.number_input(
+            "Minimum nights",
+            min_value=1,
+            max_value=365,
+            value=3,
+            step=1
+        )
+
+    with col2:
+
+        number_of_reviews = st.number_input(
+            "Number of reviews",
+            min_value=0,
+            max_value=1000,
+            value=20,
+            step=1
+        )
+
+        reviews_per_month = st.number_input(
+            "Reviews per month",
+            min_value=0.0,
+            value=1.5,
+            step=0.1
+        )
+
+        host_listings = st.number_input(
+            "Host's calculated listing count",
+            min_value=1,
+            max_value=300,
+            value=1,
+            step=1
+        )
+
+        availability = st.number_input(
+            "Availability (days/year)",
+            min_value=0,
+            max_value=365,
+            value=200,
+            step=1
+        )
+
+        last_review_year = st.number_input(
+            "Last review year",
+            min_value=2011,
+            max_value=2026,
+            value=2019,
+            step=1
+        )
+
+        last_review_month = st.number_input(
+            "Last review month",
+            min_value=1,
+            max_value=12,
+            value=6,
+            step=1
+        )
+
+    submitted = st.form_submit_button(
+        "Estimate nightly price",
+        type="primary",
+        use_container_width=True
+    )
+
+
+# -----------------------------
+# Prediction
+# -----------------------------
+if submitted:
+
     row = pd.DataFrame([{
         "neighbourhood_group": borough,
         "neighbourhood": neighbourhood,
@@ -41,77 +190,28 @@ def predict_price(borough, neighbourhood, room_type, latitude, longitude,
         "calculated_host_listings_count": int(host_listings),
         "availability_365": int(availability),
         "last_review_year": int(last_review_year),
-        "last_review_month": int(last_review_month),
+        "last_review_month": int(last_review_month)
     }])
 
     pred_log = model.predict(row)[0]
-    prediction = max(0.0, float(np.expm1(pred_log)))
-    return f"### Estimated nightly price: **${prediction:,.0f}**"
 
-
-def clear_form():
-    return (
-        "Manhattan", NEIGHBOURHOODS["Manhattan"][0], "Entire home/apt",
-        40.7306, -73.9857, 3, 20, 1.5, 1, 200, 2019, 6, ""
+    prediction = max(
+        0.0,
+        float(np.expm1(pred_log))
     )
 
-with gr.Blocks(title="Airbnb Nightly Price Predictor", theme=gr.themes.Soft()) as demo:
-    gr.Markdown(
-        "# 🏠 Airbnb Nightly Price Predictor\n"
-        "Estimate the nightly price of a New York City Airbnb listing using the trained CatBoost regression model."
+    st.success(
+        f"### Estimated nightly price: ${prediction:,.0f}"
     )
 
-    with gr.Row():
-        with gr.Column():
-            borough = gr.Dropdown(
-                choices=list(NEIGHBOURHOODS), value="Manhattan",
-                label="Neighbourhood group"
-            )
-            neighbourhood = gr.Dropdown(
-                choices=NEIGHBOURHOODS["Manhattan"], value=NEIGHBOURHOODS["Manhattan"][0],
-                label="Neighbourhood"
-            )
-            room_type = gr.Dropdown(
-                ["Entire home/apt", "Private room", "Shared room"],
-                value="Entire home/apt", label="Room type"
-            )
-            latitude = gr.Number(value=40.7306, label="Latitude")
-            longitude = gr.Number(value=-73.9857, label="Longitude")
-            minimum_nights = gr.Slider(1, 365, value=3, step=1, label="Minimum nights")
 
-        with gr.Column():
-            number_of_reviews = gr.Slider(0, 1000, value=20, step=1, label="Number of reviews")
-            reviews_per_month = gr.Number(value=1.5, label="Reviews per month")
-            host_listings = gr.Slider(1, 300, value=1, step=1, label="Host's calculated listing count")
-            availability = gr.Slider(0, 365, value=200, step=1, label="Availability (days/year)")
-            last_review_year = gr.Slider(2011, 2026, value=2019, step=1, label="Last review year")
-            last_review_month = gr.Slider(1, 12, value=6, step=1, label="Last review month")
+# -----------------------------
+# Model information
+# -----------------------------
+with st.expander("About this model"):
 
-    with gr.Row():
-        predict_button = gr.Button("Estimate nightly price", variant="primary")
-        clear_button = gr.Button("Clear")
-
-    output = gr.Markdown()
-
-    borough.change(update_neighbourhoods, inputs=borough, outputs=neighbourhood)
-    predict_button.click(
-        predict_price,
-        inputs=[borough, neighbourhood, room_type, latitude, longitude,
-                minimum_nights, number_of_reviews, reviews_per_month,
-                host_listings, availability, last_review_year, last_review_month],
-        outputs=output
+    st.write(
+        "The final model is a CatBoost regression model trained on "
+        "log1p(price). Extreme prices above $1,000 were excluded during "
+        "training."
     )
-    clear_button.click(
-        clear_form,
-        outputs=[borough, neighbourhood, room_type, latitude, longitude,
-                 minimum_nights, number_of_reviews, reviews_per_month,
-                 host_listings, availability, last_review_year, last_review_month, output]
-    )
-
-    gr.Markdown(
-        "**Note:** The model was trained on the 2019 NYC Airbnb dataset and uses a log-transformed price target. "
-        "Predictions are estimates and should not be treated as current market quotes."
-    )
-
-if __name__ == "__main__":
-    demo.launch()
